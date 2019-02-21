@@ -1,0 +1,1 @@
+cmd_/home/wh2per/Desktop/IPC-and-MQTT-Protocol/IPC/ipc.ko := arm-linux-gnueabihf-ld -EL -r  -T ./scripts/module-common.lds --build-id  -o /home/wh2per/Desktop/IPC-and-MQTT-Protocol/IPC/ipc.ko /home/wh2per/Desktop/IPC-and-MQTT-Protocol/IPC/ipc.o /home/wh2per/Desktop/IPC-and-MQTT-Protocol/IPC/ipc.mod.o ;  true
