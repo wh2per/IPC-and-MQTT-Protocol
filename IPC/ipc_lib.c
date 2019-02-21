@@ -21,10 +21,10 @@ int msgget(int key, int msgflg){
 		return FAIL;
 	
 	result = ioctl(dev, IOCTL_IPC_CHECK, &key);
-	if(result != MY_IPC_NOMSQ){
+	if(result != MY_IPC_NOMSQ){		// exist
 		if(msgflg == MY_IPC_EXCL)
 			result = FAIL;
-	}else
+	}else							// not exist
 		result = ioctl(dev, IOCTL_IPC_CREAT, &key);
 
 	close(dev);
@@ -36,17 +36,15 @@ int msgclose(int msqid){
 	int result = -1;
 	
 	result = ioctl(dev, IOCTL_IPC_CHECK, &msqid);
-	if(result > 0){
-		msqid = ioctl(dev, IOCTL_IPC_CLOSE, &msqid);
-		result = 0;
-	}
-		
+	if(result != MY_IPC_NOMSQ)
+		result = ioctl(dev, IOCTL_IPC_CLOSE, &msqid);
+	
 	close(dev);
 	
-	if(result < 0)
+	if(result == MY_IPC_NOMSQ)
 		return FAIL;
 	else
-		return SUCCESS;
+		return result;
 }
 
 int msgsnd(int msqid, void *msgp, int msgsz, int msgflg){
@@ -138,8 +136,8 @@ int main(void){
 	printf("IPC Start!\n");
 	int menu=0;
 
-	while(menu!=5){
-		printf("1. msgget  2. msgclose  3. msgsnd  4. msgrcv\n");
+	while(menu<5){
+		printf("\n\n1. create_msq 2. close_msq  3. msg_snd  4. msg_rcv\n");
 		printf("select menu : ");
 		scanf("%d",&menu);
 		
@@ -152,11 +150,26 @@ int main(void){
 				printf("msqid : ");
 				scanf("%d",&msqid);
 				result = msgget(msqid,MY_IPC_EXCL);
-				printf("msq generation Complete : %d\n",result);
+				if(result!=-1)
+					printf("msq create Complete : %d\n",result);
+				else
+					printf("this msqid is already exist!\n");
 				break;
 			}
 			case 2:		// msg close
+			{
+				int msqid=0;
+				int result=0;
+				printf("close msq! -> ");
+				printf("msqid : ");
+				scanf("%d",&msqid);
+				result = msgclose(msqid);
+				if(result!=-1)
+					printf("msq close Complete : %d\n",result);
+				else
+					printf("this msqid is not exist!\n");
 				break;
+			}
 			case 3:		// msg snd
 				break;
 			case 4:		// msg rcv
