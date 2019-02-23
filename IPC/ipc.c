@@ -203,7 +203,7 @@ static int ipc_write(struct file *file, const char *buf, size_t len, loff_t *lof
 	spin_unlock(&slock);
 	printk("MSG_SEND_COMPLETE");
 
-	return result;
+	return msq->msg_count;
 }
 
 static int ipc_read(struct file *file, char *buf, size_t len, loff_t *lof){

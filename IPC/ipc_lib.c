@@ -66,25 +66,31 @@ int msgsnd(int msqid, void *msgp, int msgsz, int msgflg){
 	printf("end making msg...\n");
 
 	result = write(dev,msgData,msgsz);
-	if(result != 0){
-		if((msgflg & MY_IPC_NOWAIT)==0){			// if msgflg=0, wait
+	if(result == MY_IPC_FULL || result == MY_IPC_ERROR || result ==MY_IPC_NOMSQ){
+		if(msgflg != MY_IPC_NOWAIT){			// if msgflg!=128, wait
 			printf("wait...\n");
-			while(result != 0 && result != MY_IPC_NOMSQ)	// wait..
+			while((result == MY_IPC_FULL || result == MY_IPC_ERROR) && result !=MY_IPC_NOMSQ)	// wait..
 				result = write(dev,msgData,msgsz);
+			
 			free(msgData);
 			close(dev);
-
-			if(result == MY_IPC_NOMSQ)
+			if(result==MY_IPC_NOMSQ)
 				return FAIL;
 			else
-				return SUCCESS;
+				return result;
+		}else{
+			printf("not wait...\n");
+			free(msgData);
+			close(dev);
+			return FAIL;
 		}
-	}	
+	}
+		
 	
 	free(msgData);
 	close(dev);
 
-	return SUCCESS;
+	return result;
 }
 
 int msgrcv(int msqid, void *msgp, int msgsz, int msgtyp, int msgflg){
@@ -176,13 +182,16 @@ int main(void){
 			{
 				int msqid=0;
 				int result=0;
+				int msgflg=0;
 				char* msgp = malloc(sizeof(char)*10);
 				printf("send msg! -> ");
 				printf("msqid : ");
 				scanf("%d",&msqid);
 				printf("msg : ");
 				scanf("%s",msgp);
-				result = msgsnd(msqid, (void*)msgp, 10, 0);
+				printf("msgflg : ");
+				scanf("%d",&msgflg);
+				result = msgsnd(msqid, (void*)msgp, 10, msgflg);
 				if(result!=-1)
 					printf("msg send Complete : %d\n",result);
 				else
