@@ -249,24 +249,13 @@ static int ipc_read(struct file *file, char *buf, size_t len, loff_t *lof){
 	}
 
 	/* copy to user_msg*/
-	if(len >= kernel_msg->msgsz){
+	if(len >= kernel_msg->msgsz)
 		len = kernel_msg->msgsz;
-		result = copy_to_user(user_msg->msgp, kernel_msg->msgp,len);
-		if(result<0){
-			spin_unlock(&slock);
-			return MY_IPC_ERROR;
-		}
-	}else{
-		if((user_msg->msgflg & MY_MSG_NOERROR) != 0){
-			result = copy_to_user(user_msg->msgp, kernel_msg->msgp,len);
-			if(result<0){
-				spin_unlock(&slock);
-				return MY_IPC_ERROR;
-			}
-		}else{
-			spin_unlock(&slock);
-			return MY_IPC_SHORT;
-		}
+
+	result = copy_to_user(user_msg->msgp, kernel_msg->msgp,len);
+	if(result<0){
+		spin_unlock(&slock);
+		return -1;
 	}
 
 	/* delete msg from msq */
@@ -277,7 +266,7 @@ static int ipc_read(struct file *file, char *buf, size_t len, loff_t *lof){
 
 	spin_unlock(&slock);
 
-	return len;
+	return msq->msg_count;
 }
 
 struct file_operations ipc_fops =

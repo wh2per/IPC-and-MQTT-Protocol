@@ -63,29 +63,38 @@ int msgsnd(int msqid, void *msgp, int msgsz, int msgflg){
 	msgData->msgp = msgp;
 	msgData->msgsz = msgsz;
 	msgData->msgflg = msgflg;
+	msgData->msgtyp = 1;
 	printf("end making msg...\n");
 
 	result = write(dev,msgData,msgsz);
-	if(result == MY_IPC_FULL || result == MY_IPC_ERROR || result ==MY_IPC_NOMSQ){
-		if(msgflg != MY_IPC_NOWAIT){			// if msgflg!=128, wait
+	if(result == MY_IPC_FULL || result == MY_IPC_ERROR || result == MY_IPC_NOMSQ){
+		if(msgflg != MY_IPC_NOWAIT){			// if msgflg!=112, wait
 			printf("wait...\n");
-			while((result == MY_IPC_FULL || result == MY_IPC_ERROR) && result !=MY_IPC_NOMSQ)	// wait..
+			while(result == MY_IPC_FULL && result !=MY_IPC_NOMSQ && result != MY_IPC_ERROR)	// wait..
 				result = write(dev,msgData,msgsz);
 			
 			free(msgData);
 			close(dev);
-			if(result==MY_IPC_NOMSQ)
-				return FAIL;
+			if(result==MY_IPC_ERROR)		// no msg
+				return -3;
+			else if(result==MY_IPC_NOMSQ)
+				return -2;
 			else
 				return result;
 		}else{
 			printf("not wait...\n");
 			free(msgData);
 			close(dev);
-			return FAIL;
+			if(result==MY_IPC_FULL)
+				return -4;
+			else if(result == MY_IPC_ERROR)
+				return -3;
+			else if(result == MY_IPC_NOMSQ)
+				return -2;
+			else
+				return result;
 		}
 	}
-		
 	
 	free(msgData);
 	close(dev);
@@ -101,12 +110,7 @@ int msgrcv(int msqid, void *msgp, int msgsz, int msgtyp, int msgflg){
 
 	if(ioctl(dev, IOCTL_IPC_CHECK, &msqid) < 0){
 		close(dev);
-		return FAIL;
-	}
-	
-	if((msgflg & MY_MSG_NOERROR) == 0){
-		close(dev);
-		return FAIL;
+		return -5;
 	}
 		
 	msgData = (struct msgData*)malloc(sizeof(struct data));
@@ -117,20 +121,37 @@ int msgrcv(int msqid, void *msgp, int msgsz, int msgtyp, int msgflg){
 	msgData->msgtyp = msgtyp;
 	
 	result = read(dev,msgData,msgsz);	// result = recv_length
-	if(result < 0){		// no data
-		if((msgflg & MY_IPC_NOWAIT)==0){	// if msgflg=0, no wait
-			while(result<0 && result != MY_IPC_NOMSQ && result != MY_IPC_SHORT)	// wait..
+	if(result == MY_IPC_NOMSQ || result == MY_IPC_SHORT || result == MY_IPC_EMPTY || result == MY_IPC_NOMSG || result == MY_IPC_ERROR){		// no data
+		if(msgflg != MY_IPC_NOWAIT){	// if msgflg!=112, no wait
+			printf("wait...\n");
+			while((result == MY_IPC_SHORT || result == MY_IPC_EMPTY || result == MY_IPC_NOMSG) && result != MY_IPC_ERROR && result != MY_IPC_NOMSQ)	// wait..
 				result = read(dev,msgData, msgsz);
-			
-			if(result == MY_IPC_NOMSQ || result == MY_IPC_SHORT){
+				
 				free(msgData);
 				close(dev);
-				return FAIL;
-			}	
-		}else{		
+				if(result == MY_IPC_NOMSQ)
+					return -5;
+				else if(result == MY_IPC_ERROR)
+					return -2;
+				else
+					return result;
+			
+		}else{	
+			printf("not wait...\n");	
 			free(msgData);
 			close(dev);
-			return FAIL;
+			if(result == MY_IPC_NOMSG)
+				return -6;
+			else if(result == MY_IPC_NOMSQ)
+				return -5;
+			else if(result == MY_IPC_SHORT)
+				return -4;
+			else if(result == MY_IPC_EMPTY)
+				return -3;
+			else if(result == MY_IPC_ERROR)
+				return -2;
+			else
+				return result;
 		}
 	}
 	
@@ -192,14 +213,51 @@ int main(void){
 				printf("msgflg : ");
 				scanf("%d",&msgflg);
 				result = msgsnd(msqid, (void*)msgp, 10, msgflg);
-				if(result!=-1)
-					printf("msg send Complete : %d\n",result);
-				else
+				if(result==-1)
 					printf("msg send Fail!\n");
+				else if(result==-2)
+					printf("msg send Fail! : MY_IPC_NOMSQ\n");
+				else if(result==-3)
+					printf("msg send Fail! : MY_IPC_ERROR\n");
+				else if(result==-4)
+					printf("msg send Fail! : MY_IPC_FULL\n");
+				else
+					printf("msg send Complete : %d\n",result);
 				break;
 			}
 			case 4:		// msg rcv
+			{
+				int msqid=0;
+				int result=0;
+				int msgtyp=0;
+				int msgflg=0;
+				char* msgp = malloc(sizeof(char)*10);
+				printf("recv msg! -> ");
+				printf("msqid : ");
+				scanf("%d",&msqid);
+				printf("msgtyp : ");
+				scanf("%d",&msgtyp);
+				printf("msgflg : ");
+				scanf("%d",&msgflg);
+				result = msgrcv(msqid, (void*)msgp,10,msgtyp,msgflg);
+				if(result==-1)
+					printf("msg receive Fail!\n");
+				else if(result==-2)
+					printf("msg receive Fail! : MY_IPC_ERROR\n");
+				else if(result==-3)
+					printf("msg receive Fail! : MY_IPC_EMPTY\n");
+				else if(result==-4)
+					printf("msg receive Fail! : MY_IPC_SHORT\n");
+				else if(result==-5)
+					printf("msg receive Fail! : MY_IPC_NOMSQ\n");
+				else if(result==-6)
+					printf("msg receive Fail! : MY_IPC_NOMSG\n");
+				else{
+					printf("msg receive Complete : %d\n",result);
+					printf("msg : %s\n",msgp);
+				}
 				break;
+			}
 			default:
 				break;
 		}
