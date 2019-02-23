@@ -57,16 +57,18 @@ int msgsnd(int msqid, void *msgp, int msgsz, int msgflg){
 		close(dev);
 		return FAIL;
 	}
-
+	printf("start making msg...\n");
 	msgData = (struct msgData*)malloc(sizeof(struct data));
 	msgData->msqid = msqid;
 	msgData->msgp = msgp;
 	msgData->msgsz = msgsz;
 	msgData->msgflg = msgflg;
+	printf("end making msg...\n");
 
 	result = write(dev,msgData,msgsz);
 	if(result != 0){
-		if((msgflg & MY_IPC_NOWAIT)==0){			// if msgflg=0, no wait
+		if((msgflg & MY_IPC_NOWAIT)==0){			// if msgflg=0, wait
+			printf("wait...\n");
 			while(result != 0 && result != MY_IPC_NOMSQ)	// wait..
 				result = write(dev,msgData,msgsz);
 			free(msgData);
@@ -171,7 +173,22 @@ int main(void){
 				break;
 			}
 			case 3:		// msg snd
+			{
+				int msqid=0;
+				int result=0;
+				char* msgp = malloc(sizeof(char)*10);
+				printf("send msg! -> ");
+				printf("msqid : ");
+				scanf("%d",&msqid);
+				printf("msg : ");
+				scanf("%s",msgp);
+				result = msgsnd(msqid, (void*)msgp, 10, 0);
+				if(result!=-1)
+					printf("msg send Complete : %d\n",result);
+				else
+					printf("msg send Fail!\n");
 				break;
+			}
 			case 4:		// msg rcv
 				break;
 			default:

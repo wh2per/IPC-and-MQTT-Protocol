@@ -180,24 +180,28 @@ static int ipc_write(struct file *file, const char *buf, size_t len, loff_t *lof
 	
 	msq = ipc_msq_get(user_msg->msqid);
 	if(msq==NULL){
+		printk("MY_IPC_NOMSQ");
 		spin_unlock(&slock);
 		return MY_IPC_NOMSQ;
 	}
 	if((msq->msg_count + 1) > MY_IPC_MAXMSG || (msq->size + len) > MY_IPC_MAXVOL){
+		printk("MY_IPC_FULL");
 		spin_unlock(&slock);
 		return MY_IPC_FULL;
 	}
 
 	new_msg = ipc_msg_create(msq->msg_count+1, user_msg, len);		// create msg
 	if(new_msg==NULL){
+		printk("MY_IPC_ERROR");
 		spin_unlock(&slock);
 		return MY_IPC_ERROR;
 	}
-
+	
 	list_add_tail(&new_msg->list, &msq->msg_head.list);
-
 	msq->msg_count++;
 	msq->size += len;
+	spin_unlock(&slock);
+	printk("MSG_SEND_COMPLETE");
 
 	return result;
 }
